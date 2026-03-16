@@ -34,13 +34,11 @@
   // dabmusic kept for artist discography — no alternative exists
   const DAB_BASE = "https://dabmusic.xyz/api";
 
-  const QOBUZ_QUALITIES = ["320kbps", "CD", "Hi-Res", "Studio Quality"];
-  const DEFAULT_QUALITY  = "Studio Quality";
+  const DEFAULT_QUALITY = "Studio Quality";
 
   // SVG Icons definition
   const ICONS = {
     search: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>`,
-    mic: `<svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>`,
     play: `<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>`,
     heart: `<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>`,
     heartOutline: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>`,
@@ -70,7 +68,6 @@
     isPlaying: null,
 
     init(api) {
-      console.log("[QobuzSearch] Initializing...");
       this.api = api;
       this.fetchLibraryTracks();
       this.injectStyles();
@@ -94,11 +91,9 @@
       // Register searchCover request handler for inter-plugin use
       if (api.handleRequest) {
         api.handleRequest("searchCover", async (data) => {
-          const { title, artist, trackId, requester } = data;
-          console.log(`[QobuzSearch] Cover search requested by: ${requester || "unknown"}`);
+          const { title, artist, trackId } = data;
           return await this.searchCoverForRPC(title, artist, trackId);
         });
-        console.log("[QobuzSearch] Registered 'searchCover' request handler");
       }
     },
 
@@ -119,6 +114,12 @@
           console.error("[QobuzSearch] Failed to fetch library tracks:", err);
         }
       }
+    },
+
+    saveAllLabel(count) {
+      if (count === 1) return "Save Track";
+      if (count === 2) return "Save Both Tracks";
+      return `Save All ${count} Tracks`;
     },
 
     formatDuration(sec) {
@@ -182,7 +183,7 @@
         .qobuz-quality-select { background: var(--bg-surface, #202020); border: 1px solid var(--border-color, #404040); border-radius: 6px; color: var(--text-primary, #fff); padding: 6px 10px; font-size: 12px; cursor: pointer; flex: 1; }
 
         /* Content */
-        .qobuz-content { flex: 1; overflow-y: auto; padding: 0; position: relative; background: var(--bg-base, #121212); }
+        .qobuz-content { flex: 1; overflow-y: auto; padding: 0 0 24px; position: relative; background: var(--bg-base, #121212); }
         .qobuz-content::-webkit-scrollbar { width: 8px; }
         .qobuz-content::-webkit-scrollbar-thumb { background: var(--bg-highlight, #333); border-radius: 4px; }
 
@@ -262,6 +263,11 @@
         .qobuz-playerbar-btn svg { fill: var(--accent-primary, #1a62b9); width: 16px; height: 16px; }
 
         .hidden { display: none !important; }
+
+        .qobuz-description { font-size:13px; color:var(--text-secondary,#ccc); line-height:1.6; }
+        .qobuz-description.collapsed { display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; }
+        .qobuz-show-more-btn { background:none; border:none; color:var(--accent-primary,#1a62b9); font-size:12px; cursor:pointer; padding:4px 0 0; display:block; }
+        .qobuz-show-more-btn:hover { text-decoration:underline; }
         .text-center { text-align: center; color: var(--text-subdued, #666); margin-top: 60px; font-size: 14px; }
 
         /* Settings */
@@ -283,7 +289,7 @@
         .qobuz-settings-close { margin-left: auto; background: none; border: none; color: var(--text-secondary, #aaa); cursor: pointer; font-size: 20px; transition: 0.2s; }
         .qobuz-settings-close:hover { color: var(--text-primary, #fff); }
 
-        .qobuz-settings-body { flex: 1; overflow-y: auto; padding: 24px; }
+        .qobuz-settings-body { flex: 1; overflow-y: auto; padding: 24px; display: flex; flex-direction: column; }
         .qobuz-settings-body::-webkit-scrollbar { width: 8px; }
         .qobuz-settings-body::-webkit-scrollbar-thumb { background: var(--bg-highlight, #333); border-radius: 4px; }
 
@@ -302,6 +308,10 @@
         .qobuz-steps li { counter-increment: steps; display: flex; gap: 14px; padding: 12px 0; border-bottom: 1px solid var(--border-color, #222); font-size: 13px; color: var(--text-secondary, #ccc); line-height: 1.5; }
         .qobuz-steps li:last-child { border-bottom: none; }
         .qobuz-steps li::before { content: counter(steps); min-width: 24px; height: 24px; border-radius: 50%; background: var(--accent-primary, #1a62b9); color: #fff; font-size: 11px; font-weight: 800; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px; }
+        .qobuz-apikey-toggle-btn { display:flex; align-items:center; justify-content:space-between; width:100%; background:var(--bg-surface,#202020); border:none; border-radius:8px; color:var(--text-secondary,#aaa); font-size:13px; font-weight:600; cursor:pointer; padding:12px 16px; text-transform:uppercase; letter-spacing:0.5px; transition:background 0.2s; }
+        .qobuz-clickable-album { color:var(--text-secondary,#888); font-size:12px; cursor:pointer; transition:color 0.2s; }
+        .qobuz-clickable-album:hover { color:var(--accent-primary,#1a62b9); }
+        .qobuz-apikey-toggle-btn:hover { background:var(--bg-highlight,#2a2a2a); }
         .qobuz-steps a { color: var(--accent-primary, #1a62b9); text-decoration: none; }
         .qobuz-steps a:hover { text-decoration: underline; }
         .qobuz-steps code { background: var(--bg-surface, #202020); padding: 2px 6px; border-radius: 4px; font-family: monospace; font-size: 12px; color: var(--text-primary, #fff); }
@@ -348,7 +358,7 @@
           padding: 16px 24px 8px;
           font-size: 16px; font-weight: 700;
           color: var(--text-primary, #fff);
-          border-top: 1px solid var(--border-color, #222);
+          
           margin-top: 8px;
         }
 
@@ -429,15 +439,36 @@
             </div>
             <div id="qobuz-pax-key-status" class="qobuz-api-key-status"></div>
 
-            <div class="qobuz-settings-section-title">How to get your API key</div>
-            <ol class="qobuz-steps">
-              <li>Visit <a href="https://api.paxsenix.org/dashboard#api-keys" target="_blank" rel="noopener">api.paxsenix.org/dashboard</a> in your browser.</li>
-              <li>Click <strong>Sign in with GitHub</strong>. Create a GitHub account first if you don't have one.</li>
-              <li>Complete sign-in, then click <strong>Authorize paxsenix</strong> when prompted.</li>
-              <li>In the left sidebar, click <strong>API Keys</strong>.</li>
-              <li>At the bottom of the screen, click the <strong>Copy Key</strong> button.</li>
-              <li>Paste the key (looks like <code>sk-paxsenix-…</code>) into the field above and click <strong>Save</strong>.</li>
-            </ol>
+            <div class="qobuz-settings-section-title">Streaming Quality</div>
+            <div class="qobuz-quality-row" style="margin-bottom:24px;">
+              <label class="qobuz-quality-label">Quality</label>
+              <select id="qobuz-quality-select" class="qobuz-quality-select">
+                <option value="320kbps">320 kbps</option>
+                <option value="CD">CD Lossless</option>
+                <option value="Hi-Res">Hi-Res</option>
+                <option value="Studio Quality" selected>Studio Quality</option>
+              </select>
+            </div>
+
+            <button id="qobuz-apikey-toggle" class="qobuz-apikey-toggle-btn">
+              
+              <span>How to get your API key</span>
+              <svg id="qobuz-apikey-arrow" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" style="transition:transform 0.2s; flex-shrink:0;"><path d="M7 10l5 5 5-5z"/></svg>
+            </button>
+            <div id="qobuz-apikey-steps" style="display:none;">
+              <ol class="qobuz-steps" style="margin-top:8px;">
+                <li>Visit <a href="https://api.paxsenix.org/dashboard#api-keys" target="_blank" rel="noopener">api.paxsenix.org/dashboard</a> in your browser.</li>
+                <li>Click <strong>Sign in with GitHub</strong>. Create a GitHub account first if you don't have one.</li>
+                <li>Complete sign-in, then click <strong>Authorize paxsenix</strong> when prompted.</li>
+                <li>In the left sidebar, click <strong>API Keys</strong>.</li>
+                <li>At the bottom of the screen, click the <strong>Copy Key</strong> button.</li>
+                <li>Paste the key (looks like <code>sk-paxsenix-…</code>) into the field above and click <strong>Save</strong>.</li>
+              </ol>
+            </div>
+
+            <div style="margin-top:auto; padding-top:24px; font-size:11px; color:var(--text-subdued,#555); line-height:1.7; text-align:center;">
+              For any problems / issues please contact us on Discord. Some ISPs block certain domains, so please try with a VPN if you face issues. Make sure you get the API key for streaming to work. Please try to post screenshots when posting an issue. Made with ❤️
+            </div>
           </div>
         </div>
         
@@ -452,15 +483,7 @@
               <button class="qobuz-tab" data-type="album">Albums</button>
               <button class="qobuz-tab" data-type="artist">Artists</button>
             </div>
-            <div class="qobuz-quality-row">
-              <label class="qobuz-quality-label">Quality</label>
-              <select id="qobuz-quality-select" class="qobuz-quality-select">
-                <option value="320kbps">320 kbps</option>
-                <option value="CD">CD Lossless</option>
-                <option value="Hi-Res">Hi-Res</option>
-                <option value="Studio Quality" selected>Studio Quality</option>
-              </select>
-            </div>
+
           </div>
         </div>
 
@@ -496,6 +519,18 @@
       panel.querySelector(".qobuz-settings-close").onclick = () => {
         settingsPanel.classList.remove("open");
       };
+
+      // API key steps toggle
+      const apiKeyToggle = panel.querySelector("#qobuz-apikey-toggle");
+      const apiKeySteps  = panel.querySelector("#qobuz-apikey-steps");
+      const apiKeyArrow  = panel.querySelector("#qobuz-apikey-arrow");
+      if (apiKeyToggle && apiKeySteps) {
+        apiKeyToggle.onclick = () => {
+          const open = apiKeySteps.style.display === "none";
+          apiKeySteps.style.display = open ? "block" : "none";
+          if (apiKeyArrow) apiKeyArrow.style.transform = open ? "rotate(180deg)" : "";
+        };
+      }
       panel.querySelector("#qobuz-pax-key-save").onclick = () => {
         const val = keyInput.value.trim();
         if (!val) {
@@ -684,7 +719,6 @@
       const cacheKey  = `${this.state.searchType}:${query}`;
 
       if (this.searchCache[cacheKey]) {
-        console.log(`[QobuzSearch] Cache hit for "${cacheKey}"`);
         this.state.currentData = this.searchCache[cacheKey];
         this.renderSearchResults(this.searchCache[cacheKey]);
         return;
@@ -693,6 +727,48 @@
       // ── Artist tab: use buildArtistData to search + filter, then extract
       //    a deduplicated list of matching artists to show as cards ────────────
       if (this.state.searchType === "artist") {
+
+        // ── 0. Paxsenix — returns a proper artists[] with pictures ──────────
+        const paxAuthArtist = getPaxAuth();
+        if (paxAuthArtist) {
+          try {
+            const paxUrl = `https://api.paxsenix.org/qobuz/search?q=${encodeURIComponent(query)}`;
+            const paxRes = await (this.api.fetch
+              ? this.api.fetch(paxUrl, { headers: { "Authorization": paxAuthArtist, "Content-Type": "application/json" } })
+              : fetch(paxUrl,          { headers: { "Authorization": paxAuthArtist, "Content-Type": "application/json" } }));
+            if (!paxRes.ok) throw new Error("HTTP " + paxRes.status);
+            const paxData = await paxRes.json();
+            if (!paxData.ok) throw new Error(paxData.message || "Paxsenix returned ok: false");
+
+            // Populate track + album cache keys from this single response
+            this._populateCacheFromPaxSearch(paxData, query);
+
+            const queryLower = query.toLowerCase();
+            const artistItems = (paxData.artists || [])
+              .filter(a => (a.name || "").toLowerCase().includes(queryLower))
+              .map(a => ({
+                id:          String(a.id),
+                name:        a.name || "Unknown Artist",
+                slug:        a.slug || null,
+                albumsCount: a.albums_count || null,
+                // Best available picture — extralarge → large → medium → small → picture fallback
+                picture:     a.image?.mega || a.image?.extralarge || a.image?.large || a.image?.medium || a.image?.small || a.picture || null,
+                _source:     "paxsenix"
+              }));
+
+            if (artistItems.length) {
+                  this.searchCache[cacheKey] = artistItems;
+              this.state.currentData = artistItems;
+              this.renderSearchResults(artistItems);
+              return;
+            }
+            console.warn(`[QobuzSearch] Paxsenix artist search returned 0 results for "${query}", falling through`);
+          } catch (e) {
+            console.warn("[QobuzSearch] Paxsenix artist tab search failed:", e.message);
+          }
+        }
+
+        // ── 1. jumo-dl fallback (workaround) ───────────
         try {
           const url = `${JUMO_BASE}/search?query=${encodeURIComponent(query)}&offset=0&limit=50&region=NZ`;
           const res = await (this.api.fetch
@@ -724,8 +800,6 @@
           const queryLower = query.toLowerCase();
           const filtered = artists.filter(a => a.name.toLowerCase().includes(queryLower));
 
-          console.log(`[QobuzSearch] Artist tab "${query}" → ${filtered.length} artists`);
-
           if (!filtered.length) {
             container.innerHTML = `<div class="text-center">No artists found</div>`;
             return;
@@ -744,8 +818,31 @@
       try {
         let results = null;
 
+        // ── 0. Paxsenix (all types, requires API key) ───────────────────────
+        const paxAuthSearch = getPaxAuth();
+        if (paxAuthSearch) {
+          try {
+            const paxUrl = `https://api.paxsenix.org/qobuz/search?q=${encodeURIComponent(query)}`;
+            const paxRes = await (this.api.fetch
+              ? this.api.fetch(paxUrl, { headers: { "Authorization": paxAuthSearch, "Content-Type": "application/json" } })
+              : fetch(paxUrl,          { headers: { "Authorization": paxAuthSearch, "Content-Type": "application/json" } }));
+            if (!paxRes.ok) throw new Error("HTTP " + paxRes.status);
+            const paxData = await paxRes.json();
+            if (!paxData.ok) throw new Error(paxData.message || "Paxsenix returned ok: false");
+
+            // Populate all 3 cache keys from this single response
+            this._populateCacheFromPaxSearch(paxData, query);
+
+            results = this.searchCache[`${this.state.searchType}:${query}`] || null;
+            if (!results?.length) results = null;
+          } catch (e) {
+            console.warn("[QobuzSearch] Paxsenix search failed:", e.message);
+            results = null;
+          }
+        }
+
         // ── 1. jumo-dl (tracks + albums, no artist search) 
-        if (this.state.searchType !== "artist") {
+        if (!results && this.state.searchType !== "artist") {
           try {
             const url = `${JUMO_BASE}/search?query=${encodeURIComponent(query)}&offset=0&limit=50&region=NZ`;
             const res = await (this.api.fetch
@@ -753,28 +850,6 @@
               : fetch(url, { headers: JUMO_HEADERS }));
             if (!res.ok) throw new Error("HTTP " + res.status);
             const data = await res.json();
-
-            // RAW RESPONSE LOGGING 
-            if (DEBUG) {
-              console.groupCollapsed(`[QobuzSearch] jumo-dl raw search response — "${query}"`);
-              console.log("Full response object:", data);
-              console.log("tracks.items count:", data.tracks?.items?.length ?? 0);
-              console.log("albums.items count:", data.albums?.items?.length ?? 0);
-              if (data.tracks?.items?.length) {
-                console.groupCollapsed("First track object (raw):");
-                console.log(data.tracks.items[0]);
-                console.groupEnd();
-                console.log("All track objects (raw):", data.tracks.items);
-              }
-              if (data.albums?.items?.length) {
-                console.groupCollapsed("First album object (raw):");
-                console.log(data.albums.items[0]);
-                console.groupEnd();
-                console.log("All album objects (raw):", data.albums.items);
-              }
-              console.groupEnd();
-            }
-            // ── END LOGGING 
 
             const trackItems = data.tracks?.items || [];
             if (trackItems.length) {
@@ -785,7 +860,9 @@
                 artistId:     t.performer?.id   || t.artist?.id   || null,
                 artistSlug:   t.album?.artist?.slug || null,
                 albumTitle:   t.album?.title    || "",
-                albumId:      t.album?.id       ? String(t.album.id) : null,
+                albumId:      t.album?.id  ? String(t.album.id)  : null,
+                albumUpc:     t.album?.upc ? String(t.album.upc) : null,
+                //just for future use
                 duration:     t.duration        || 0,
                 cover:        t.album?.image?.large || t.album?.image?.small || t.album?.image?.thumbnail || "",
                 bitDepth:     t.maximum_bit_depth      || null,
@@ -804,18 +881,22 @@
             const albumItems = data.albums?.items || [];
             if (albumItems.length) {
               this.searchCache[`album:${query}`] = albumItems.map(a => ({
-                id:          String(a.id),
+                id:          String(a.id),          // slug (new albums) or UPC (old albums) — jumo-dl accepts both
+                upc:         String(a.upc || a.id),  // real UPC when available; Paxsenix requires this
                 title:       a.title,
                 artist:      a.artist?.name || "Unknown Artist",
+                artistId:    a.artist?.id   || null, // numeric, confirmed present in jumo-dl response
+                artistSlug:  a.artist?.slug || null,
                 cover:       a.image?.large || a.image?.small || a.image?.thumbnail || "",
                 isHiRes:     !!(a.hires_streamable),
                 tracksCount: a.tracks_count || null,
+                releaseDate: a.release_date_original || null,
+                genre:       a.genre?.name  || null,
                 _source:     "jumo"
               }));
             }
 
             results = this.searchCache[`${this.state.searchType}:${query}`] || null;
-            if (results) console.log(`[QobuzSearch] Search OK via jumo-dl (${results.length} results)`);
           } catch (e) {
             console.warn("[QobuzSearch] jumo-dl search failed:", e.message);
             results = null;
@@ -846,7 +927,6 @@
                 isHiRes:      false,
                 _source:      "yams"
               }));
-              console.log(`[QobuzSearch] Search OK via YAMS (${results.length} results)`);
             }
           } catch (e) {
             console.warn("[QobuzSearch] YAMS search failed:", e.message);
@@ -867,7 +947,6 @@
             if (!items.length && Array.isArray(data)) items = data;
             if (items.length) {
               results = items;
-              console.log(`[QobuzSearch] Search OK via dabmusic (${results.length} results)`);
             }
           } catch (e) {
             console.warn("[QobuzSearch] dabmusic search failed:", e.message);
@@ -886,6 +965,7 @@
         this.renderSearchResults(results);
       } catch (err) {
         console.error("[QobuzSearch] Search error:", err);
+        this.showToast("Search failed. Please try again.", true);
         container.innerHTML = `<div class="text-center" style="color:#f55">Error: ${err.message}</div>`;
       }
     },
@@ -902,76 +982,115 @@
       }
     },
 
+    // Normalize a raw Paxsenix or jumo-dl album detail response into the shared shape
+    _normalizeAlbumDetail(data, albumId) {
+      const cover = data.image?.large || data.image?.small || data.image?.thumbnail || "";
+      const trackItems         = data.tracks?.items || [];
+      const expectedTrackCount = data.tracks_count  || null;
+
+      // albums_same_artist — full discography from Paxsenix album detail
+      // id  = numeric qobuz_id for jumo-dl
+      // upc = UPC string for Paxsenix album detail endpoint
+      // Both must come from their dedicated fields — a.id is an alphanumeric slug
+      // on newer albums and is NOT valid for either provider
+      const sameArtistAlbums = (data.albums_same_artist?.items || []).map(a => ({
+        id:          String(a.id || ""),       // slug/UPC for jumo-dl
+        qobuzId:     String(a.qobuz_id || ""), // numeric — kept for reference
+        upc:         String(a.upc || ""),
+        title:       a.title + (a.version ? ` (${a.version})` : ""),
+        artist:      a.artist?.name || data.artist?.name || "Unknown Artist",
+        artistId:    a.artist?.id   || data.artist?.id   || null,
+        cover:       a.image?.large || a.image?.small || a.image?.thumbnail || "",
+        isHiRes:     !!(a.hires_streamable),
+        tracksCount: a.tracks_count || null,
+        releaseDate: a.release_date_original || null,
+        genre:       a.genre?.name  || null,
+        _source:     "paxsenix"
+      }));
+
+      return {
+        id:                 String(data.id || albumId),       // slug/UPC for jumo-dl
+        upc:                String(data.upc || ""),
+        title:              data.title        || "Unknown Album",
+        version:            data.version      || null,
+        artist:             data.artist?.name || "Unknown Artist",
+        artistId:           data.artist?.id   || null,
+        artistSlug:         data.artist?.slug || null,
+        // All credited artists with roles — used for collaborative albums
+        allArtists:         (data.artists || []).map(a => ({ id: a.id, name: a.name, roles: a.roles || [] })),
+        cover,
+        releaseDate:        data.release_date_original || data.released_at || null,
+        releaseType:        data.release_type  || data.product_type || null,
+        isHiRes:            !!(data.hires_streamable),
+        bitDepth:           data.maximum_bit_depth     || null,
+        sampleRate:         data.maximum_sampling_rate || null,
+        genre:              data.genre?.name  || (data.genres_list?.[0]) || null,
+        label:              data.label?.name  || null,
+        copyright:          data.copyright    || null,
+        description:        typeof data.description === "string" ? data.description : null,
+        awards:             data.awards       || [],
+        totalDuration:      data.duration     || null,
+        expectedTrackCount: expectedTrackCount,
+        sameArtistAlbums,
+        tracks: trackItems.map(t => ({
+          id:          String(t.id),
+          title:       t.title + (t.version ? ` (${t.version})` : ""),
+          artist:      t.performer?.name || data.artist?.name || "Unknown Artist",
+          artistId:    t.performer?.id   || data.artist?.id   || null,
+          artistSlug:  data.artist?.slug || null,
+          albumTitle:  data.title        || "",
+          albumId:     String(data.id  || ""),          // use id (UPC/slug) — qobuz_id causes HTTP 500
+          albumUpc:    String(data.upc || ""),          // real UPC for Paxsenix detail lookup
+          duration:    t.duration        || 0,
+          cover,
+          trackNumber: t.track_number    || null,
+          discNumber:  t.media_number    || null,
+          bitDepth:    t.maximum_bit_depth     || data.maximum_bit_depth     || null,
+          sampleRate:  t.maximum_sampling_rate || data.maximum_sampling_rate || null,
+          isHiRes:     !!(t.hires_streamable  ?? data.hires_streamable),
+          parental_warning: !!(t.parental_warning),
+          performers:  t.performers      || null,
+          isrc:        t.isrc            || null,
+        }))
+      };
+    },
+
     async fetchAlbumDetails(albumId) {
       this.renderSkeleton("album");
+
+      // ── 0. Paxsenix — returns richer data + discography ──────────────────
+      // Both Paxsenix and jumo-dl accept albumId directly (slug on new albums,
+      // UPC string on old albums). qobuz_id (numeric) causes HTTP 500 on both.
+      const paxAuth = getPaxAuth();
+      if (paxAuth && albumId) {
+        try {
+          const paxUrl = `https://api.paxsenix.org/qobuz/album?id=${encodeURIComponent(albumId)}`;
+          const paxRes = await this.fetchWithTimeout(
+            paxUrl,
+            { headers: { "Authorization": paxAuth, "Content-Type": "application/json" } },
+            10000
+          );
+          if (!paxRes.ok) throw new Error("HTTP " + paxRes.status);
+          const data = await paxRes.json();
+          if (!data.ok) throw new Error(data.message || "Paxsenix returned ok: false");
+          return this._normalizeAlbumDetail(data, albumId);
+        } catch (e) {
+          console.warn("[QobuzSearch] Paxsenix album detail failed:", e.message);
+        }
+      }
+
+      // ── 1. jumo-dl fallback ────────────────────────
       try {
-        const url = `${JUMO_BASE}/album?album_id=${albumId}&region=NZ`;
+        const url = `${JUMO_BASE}/album?album_id=${albumId}&region=NZ`; // always use id (slug/UPC) — not upc override
         const res = await this.fetchWithTimeout(url, { headers: JUMO_HEADERS }, 10000);
         if (!res.ok) throw new Error("HTTP " + res.status);
         const data = await res.json();
 
-        // RAW RESPONSE LOGGING 
-        if (DEBUG) {
-          console.groupCollapsed(`[QobuzSearch] jumo-dl raw album response — ID: ${albumId}`);
-          console.log("Full album object:", data);
-          console.log("Title:", data.title);
-          console.log("Artist:", data.artist?.name);
-          console.log("Track count (reported by API):", data.tracks_count);
-          console.log("Track count (actually returned):", data.tracks?.items?.length ?? 0);
-          console.log("Hi-Res streamable:", data.hires_streamable);
-          console.log("Bit depth:", data.maximum_bit_depth);
-          console.log("Sample rate:", data.maximum_sampling_rate);
-          if (data.tracks?.items?.length) {
-            console.groupCollapsed("First track object (raw):");
-            console.log(data.tracks.items[0]);
-            console.groupEnd();
-            console.log("All track objects (raw):", data.tracks.items);
-          }
-          console.groupEnd();
-        }
-        // END LOGGING 
-
-        const trackItems         = data.tracks?.items || [];
-        const expectedTrackCount = data.tracks_count  || null;
-
-        return {
-          id:                 String(data.id || albumId),
-          title:              data.title        || "Unknown Album",
-          artist:             data.artist?.name || "Unknown Artist",
-          artistId:           data.artist?.id   || null,
-          cover:              data.image?.large || data.image?.small || data.image?.thumbnail || "",
-          releaseDate:        data.release_date_original || data.released_at || null,
-          releaseType:        data.release_type  || null,
-          isHiRes:            !!(data.hires_streamable),
-          bitDepth:           data.maximum_bit_depth     || null,
-          sampleRate:         data.maximum_sampling_rate || null,
-          genre:              data.genre?.name  || null,
-          label:              data.label?.name  || null,
-          description:        data.description  || null,
-          totalDuration:      data.duration     || null,
-          expectedTrackCount: expectedTrackCount,
-          tracks: trackItems.map(t => ({
-            id:          String(t.id),
-            title:       t.title + (t.version ? ` (${t.version})` : ""),
-            artist:      data.artist?.name || "Unknown Artist",
-            artistId:    data.artist?.id   || null,
-            artistSlug:  data.artist?.slug || null,
-            albumTitle:  data.title        || "",
-            albumId:     String(data.id || ""),
-            duration:    t.duration        || 0,
-            cover:       data.image?.large || data.image?.small || data.image?.thumbnail || "",
-            trackNumber: t.track_number    || null,
-            discNumber:  t.media_number    || null,
-            bitDepth:    t.maximum_bit_depth     || data.maximum_bit_depth     || null,
-            sampleRate:  t.maximum_sampling_rate || data.maximum_sampling_rate || null,
-            isHiRes:     !!(t.hires_streamable  ?? data.hires_streamable),
-            parental_warning: !!(t.parental_warning),
-          }))
-        };
+        return this._normalizeAlbumDetail(data, albumId);
       } catch (err) {
         const msg = err.name === "AbortError"
-          ? "Album details timed out"
-          : "Error loading album";
+          ? "Album details timed out — please try again"
+          : "Could not load album. Please try again.";
         this.showToast(msg, true);
         console.error("[QobuzSearch] fetchAlbumDetails:", err);
         return null;
@@ -985,10 +1104,135 @@
       const cacheKey = `artist:${query}`;
 
       if (this.searchCache[cacheKey]) {
-        console.log(`[QobuzSearch] Artist cache hit for "${query}"`);
         return this.searchCache[cacheKey];
       }
 
+      // ── 0. Paxsenix /qobuz/artist — full artist detail ──────────────────
+      const paxAuth = getPaxAuth();
+      if (paxAuth && artistId) {
+        try {
+          const paxUrl = `https://api.paxsenix.org/qobuz/artist?id=${encodeURIComponent(artistId)}`;
+          const paxRes = await (this.api.fetch
+            ? this.api.fetch(paxUrl, { headers: { "Authorization": paxAuth, "Content-Type": "application/json" } })
+            : fetch(paxUrl,          { headers: { "Authorization": paxAuth, "Content-Type": "application/json" } }));
+          if (!paxRes.ok) throw new Error("HTTP " + paxRes.status);
+          const data = await paxRes.json();
+          if (!data.ok) throw new Error(data.message || "Paxsenix returned ok: false");
+
+          // ── Metadata ────────────────────────────────────────────────────────
+          const artistPicture = data.image?.mega || data.image?.extralarge || data.image?.large || data.image?.medium || data.image?.small || data.picture || null;
+          const albumsCount   = data.albums_count || null;
+          const artistSlug    = data.slug || null;
+          // Use full biography content, fall back to summary
+          const description   = data.biography?.content || data.biography?.summary || null;
+
+          // ── Tracks from search cache (artist endpoint has no tracks) ────────
+          const nameLower  = artistName.toLowerCase();
+          const cachedTracks = this.searchCache[`track:${query}`] || [];
+          const tracks = cachedTracks.filter(t =>
+            String(t.artistId) === String(artistId) ||
+            (t.artist || "").toLowerCase() === nameLower
+          );
+
+          // ── tracks_appears_on — guest/feature appearances ───────────────────
+          const appearsOn = (data.tracks_appears_on?.items || []).map(t => ({
+            id:          String(t.id),
+            title:       t.title + (t.version ? ` (${t.version})` : ""),
+            artist:      t.performer?.name || artistName,
+            artistId:    t.performer?.id   || artistId,
+            albumTitle:  t.album?.title    || "",
+            albumId:     t.album?.id       ? String(t.album.id)  : null,
+            albumUpc:    t.album?.upc      ? String(t.album.upc) : null,
+            duration:    t.duration        || 0,
+            cover:       t.album?.image?.large || t.album?.image?.small || t.album?.image?.thumbnail || "",
+            bitDepth:    t.maximum_bit_depth      || null,
+            sampleRate:  t.maximum_sampling_rate  || null,
+            isHiRes:     !!(t.hires_streamable),
+            parental_warning: !!(t.parental_warning),
+            _source:     "paxsenix"
+          }));
+
+          // ── Discography: merge albums + albums_without_last_release ──────────
+          // Deduplicate by qobuz_id — keep one entry per unique ID,
+          // preferring albums[] entries when both arrays have the same ID.
+          const normalizeAlbum = a => ({
+            id:          String(a.id || ""),       // slug/UPC — what jumo-dl expects
+            qobuzId:     String(a.qobuz_id || ""), // numeric — kept for reference
+            upc:         String(a.upc || ""),
+            title:       a.title + (a.version ? ` (${a.version})` : ""),
+            artist:      a.artist?.name || artistName,
+            artistId:    a.artist?.id   || artistId,
+            cover:       a.image?.large || a.image?.small || a.image?.thumbnail || "",
+            isHiRes:     !!(a.hires_streamable),
+            tracksCount: a.tracks_count || null,
+            releaseDate: a.release_date_original || null,
+            genre:       a.genre?.name  || null,
+            label:       a.label?.name  || null,
+            _source:     "paxsenix"
+          });
+
+          const seenIds  = new Set(); // deduplicates by qobuz_id (numeric), not slug
+          const allAlbums = [];
+
+          // ── album_last_release — pinned at top with Latest badge ─────────────
+          const lastRelease = data.album_last_release
+            ? { ...normalizeAlbum(data.album_last_release), isLatest: true }
+            : null;
+          if (lastRelease) {
+            seenIds.add(lastRelease.qobuzId || lastRelease.id);
+            allAlbums.push(lastRelease);
+          }
+
+          // albums[] first — gives us 100 entries
+          for (const a of (data.albums?.items || [])) {
+            const norm = normalizeAlbum(a);
+            const dedupeKey = norm.qobuzId || norm.id;
+            if (!seenIds.has(dedupeKey)) { seenIds.add(dedupeKey); allAlbums.push(norm); }
+          }
+
+          // albums_without_last_release — adds the ~10 non-overlapping ones
+          for (const a of (data.albums_without_last_release?.items || [])) {
+            const norm = normalizeAlbum(a);
+            const dedupeKey = norm.qobuzId || norm.id;
+            if (!seenIds.has(dedupeKey)) { seenIds.add(dedupeKey); allAlbums.push(norm); }
+          }
+
+          // ── Playlists — Qobuz editorial playlists featuring this artist ──────
+          const playlists = (data.playlists || []).map(pl => ({
+            id:          String(pl.id),
+            name:        pl.name || artistName,
+            tracksCount: pl.tracks_count || 0,
+            duration:    pl.duration     || 0,
+            owner:       pl.owner?.name  || "Qobuz",
+            // 4-cover at 300px — best available image
+            images:      pl.images300?.length ? pl.images300 : (pl.images150?.length ? pl.images150 : pl.images || []),
+            tracks:      (pl.tracks?.items || []).map(t => ({
+              id:          String(t.id),
+              title:       t.title + (t.version ? ` (${t.version})` : ""),
+              artist:      t.performer?.name || artistName,
+              artistId:    t.performer?.id   || artistId,
+              albumTitle:  t.album?.title    || "",
+              albumId:     t.album?.id       ? String(t.album.id)  : null,
+              albumUpc:    t.album?.upc      ? String(t.album.upc) : null,
+              duration:    t.duration        || 0,
+              cover:       t.album?.image?.large || t.album?.image?.small || t.album?.image?.thumbnail || "",
+              bitDepth:    t.maximum_bit_depth     || null,
+              sampleRate:  t.maximum_sampling_rate || null,
+              isHiRes:     !!(t.hires_streamable),
+              parental_warning: !!(t.parental_warning),
+              _source:     "paxsenix"
+            }))
+          }));
+
+          const result = { artistId, artistName, artistPicture, tracks, albums: allAlbums, appearsOn, playlists, albumsCount, artistSlug, description };
+          this.searchCache[cacheKey] = result;
+          return result;
+        } catch (e) {
+          console.warn("[QobuzSearch] Paxsenix artist detail failed:", e.message);
+        }
+      }
+
+      // ── 1. jumo-dl fallback  ────────────
       try {
         const url = `${JUMO_BASE}/search?query=${encodeURIComponent(query)}&offset=0&limit=50&region=NZ`;
         const res = await (this.api.fetch
@@ -1008,7 +1252,8 @@
             artistId:     t.performer?.id   || t.artist?.id   || artistId,
             artistSlug:   t.album?.artist?.slug || null,
             albumTitle:   t.album?.title    || "",
-            albumId:      t.album?.id       ? String(t.album.id) : null,
+            albumId:      t.album?.id  ? String(t.album.id)  : null,
+            albumUpc:     t.album?.upc ? String(t.album.upc) : null,
             duration:     t.duration        || 0,
             cover:        t.album?.image?.large || t.album?.image?.small || t.album?.image?.thumbnail || "",
             bitDepth:     t.maximum_bit_depth      || null,
@@ -1035,8 +1280,6 @@
             _source:     "jumo"
           }));
 
-        console.log(`[QobuzSearch] Artist search "${query}" → ${tracks.length} tracks, ${albums.length} albums after filter`);
-
         // Pull catalog-level artist metadata from the first matched item
         const firstTrack = (data.tracks?.items || []).find(t =>
           (t.performer?.name || "").toLowerCase() === nameLower ||
@@ -1046,8 +1289,8 @@
           (a.artist?.name || "").toLowerCase() === nameLower
         );
         const artistMeta  = firstTrack?.album?.artist || firstAlbum?.artist || {};
-        const albumsCount = artistMeta.albums_count || null;  // total on Qobuz catalog
-        const artistSlug  = artistMeta.slug || null;          // e.g. "queen" — URL key
+        const albumsCount = artistMeta.albums_count || null;
+        const artistSlug  = artistMeta.slug || null;
 
         const result = { artistId, artistName, tracks, albums, albumsCount, artistSlug };
         this.searchCache[cacheKey] = result;
@@ -1055,7 +1298,7 @@
 
       } catch (err) {
         console.warn("[QobuzSearch] Artist search failed:", err.message);
-        // Fall back to whatever is already in cache from prior searches
+        this.showToast("Could not load artist data.", true);
         return this._buildArtistFromCache(artistId, artistName);
       }
     },
@@ -1102,14 +1345,78 @@
           if (parsed.url) return parsed.url;
           if (parsed.urls?.[0]) return parsed.urls[0];
         } else if (manifestMimeType === "application/dash+xml") {
-          console.log("[QobuzSearch] MPD manifest — returning as blob URL for dash.js");
           const blob = new Blob([manifestStr], { type: "application/dash+xml" });
           return URL.createObjectURL(blob);
         }
         return null;
       } catch (err) {
         console.error("[QobuzSearch] Manifest decode error:", err);
+        this.showToast("Stream format error. Try a different quality.", true);
         return null;
+      }
+    },
+
+    // Normalizes a Paxsenix /qobuz/search response into the shared cache shape
+    // used by all providers. Populates track:, album:, and artist: cache keys.
+    _populateCacheFromPaxSearch(data, query) {
+      const trackItems = data.tracks || [];
+      if (trackItems.length) {
+        this.searchCache[`track:${query}`] = trackItems.map(t => ({
+          id:           String(t.id),
+          title:        t.title + (t.version ? ` (${t.version})` : ""),
+          artist:       t.performer?.name || t.artist?.name || "Unknown Artist",
+          artistId:     t.performer?.id   || t.artist?.id   || null,
+          artistSlug:   t.album?.artist?.slug || null,
+          albumTitle:   t.album?.title    || "",
+          albumId:      t.album?.id  ? String(t.album.id)  : null,
+          albumUpc:     t.album?.upc ? String(t.album.upc) : null,
+          duration:     t.duration        || 0,
+          // Best quality cover: large → small → thumbnail
+          cover:        t.album?.image?.large || t.album?.image?.small || t.album?.image?.thumbnail || "",
+          bitDepth:     t.maximum_bit_depth      || null,
+          sampleRate:   t.maximum_sampling_rate  || null,
+          audioQuality: t.maximum_bit_depth
+            ? `${t.maximum_bit_depth}bit / ${t.maximum_sampling_rate}kHz`
+            : (t.maximum_technical_specifications || ""),
+          isHiRes:          !!(t.hires_streamable),
+          trackNumber:      t.track_number  || null,
+          discNumber:       t.media_number  || null,
+          parental_warning: !!(t.parental_warning),
+          _source:      "paxsenix"
+        }));
+      }
+
+      const albumItems = data.albums || [];
+      if (albumItems.length) {
+        this.searchCache[`album:${query}`] = albumItems.map(a => ({
+          id:          String(a.id || ""),       // slug/UPC — what jumo-dl expects
+          qobuzId:     String(a.qobuz_id || ""), // numeric — kept for Paxsenix detail if needed
+          upc:         String(a.upc || ""),
+          title:       a.title,
+          artist:      a.artist?.name || "Unknown Artist",
+          artistId:    a.artist?.id   || null,
+          artistSlug:  a.artist?.slug || null,
+          // Best quality cover: large → small → thumbnail
+          cover:       a.image?.large || a.image?.small || a.image?.thumbnail || "",
+          isHiRes:     !!(a.hires_streamable),
+          tracksCount: a.tracks_count || null,
+          releaseDate: a.release_date_original || null,
+          genre:       a.genre?.name  || null,
+          _source:     "paxsenix"
+        }));
+      }
+
+      const artistItems = data.artists || [];
+      if (artistItems.length) {
+        this.searchCache[`artist:${query}`] = artistItems.map(a => ({
+          id:          String(a.id),
+          name:        a.name || "Unknown Artist",
+          slug:        a.slug || null,
+          albumsCount: a.albums_count || null,
+          // Best quality picture: extralarge → large → medium → small → picture
+          picture:     a.image?.mega || a.image?.extralarge || a.image?.large || a.image?.medium || a.image?.small || a.picture || null,
+          _source:     "paxsenix"
+        }));
       }
     },
 
@@ -1129,15 +1436,14 @@
       };
       const qualitiesToTry = [selectedQuality, ...(QUALITY_FALLBACKS[selectedQuality] || [])];
 
+      const paxAuth = getPaxAuth();
+      if (!paxAuth) {
+        this.showToast("⚙️ Add your Paxsenix API key in Settings to enable streaming", true, true);
+      }
+
       for (const quality of qualitiesToTry) {
         // ── 1. Paxsenix 
-        try {
-          const paxAuth = getPaxAuth();
-          if (!paxAuth) {
-            // Show actionable toast and skip Paxsenix
-            this.showToast("⚙️ Add your Paxsenix API key in Settings to enable streaming", true, true);
-            throw new Error("No Paxsenix API key configured");
-          }
+        if (paxAuth) try {
           const qobuzUrl = encodeURIComponent(`https://open.qobuz.com/track/${rawId}`);
           const url = `${PAX_BASE}?url=${qobuzUrl}&quality=${encodeURIComponent(quality)}`;
           const res = await (this.api.fetch
@@ -1145,13 +1451,13 @@
             : fetch(url,          { headers: { "Authorization": paxAuth, "Content-Type": "application/json" } }));
           if (!res.ok) throw new Error("HTTP " + res.status);
           const data = await res.json();
+          if (!data.ok) throw new Error(data.message || "Paxsenix returned ok: false");
 
           // Handle both direct URL and manifest responses
           let streamUrl = data.directUrl || data.data?.directUrl || null;
           if (!streamUrl && data.manifest) streamUrl = this.decodeManifest(data);
 
           if (!streamUrl) throw new Error("No stream URL in Paxsenix response");
-          console.log(`[QobuzSearch] Stream OK via Paxsenix @ ${quality}`);
           if (streamUrl?.startsWith("blob:")) setTimeout(() => URL.revokeObjectURL(streamUrl), 5000);
           return { url: streamUrl, quality, source: "paxsenix" };
         } catch (e) {
@@ -1169,14 +1475,12 @@
           if (!streamUrl && data.manifest) streamUrl = this.decodeManifest(data);
 
           if (!streamUrl) throw new Error("No stream URL in dabmusic response");
-          console.log(`[QobuzSearch] Stream OK via dabmusic @ ${quality}`);
           if (streamUrl?.startsWith("blob:")) setTimeout(() => URL.revokeObjectURL(streamUrl), 5000);
           return { url: streamUrl, quality, source: "dabmusic" };
         } catch (e) {
           console.warn(`[QobuzSearch] dabmusic failed @ ${quality}:`, e.message);
         }
 
-        console.warn(`[QobuzSearch] All providers failed @ ${quality}, trying next tier...`);
       }
 
       throw new Error("[QobuzSearch] All providers and quality tiers exhausted");
@@ -1265,8 +1569,12 @@
           <div class="qobuz-hero-info">
             <div class="qobuz-hero-type">${releaseTypeLabel} ${badge}</div>
             <div class="qobuz-hero-title">${this.escapeHtml(album.title)}</div>
+            ${album.version ? `<div style="font-size:13px; color:var(--text-secondary,#aaa); margin-top:-6px; margin-bottom:4px;">${this.escapeHtml(album.version)}</div>` : ""}
             <div class="qobuz-hero-meta">
-              <span class="qobuz-clickable-artist" data-artist-id="${album.artistId || ''}">${this.escapeHtml(album.artist)}</span> 
+              ${(album.allArtists && album.allArtists.length > 1)
+                ? album.allArtists.map(a => `<span class="qobuz-clickable-artist" data-artist-id="${a.id}">${this.escapeHtml(a.name)}</span>`).join(` <span style="color:var(--text-subdued,#555);">&</span> `)
+                : `<span class="qobuz-clickable-artist" data-artist-id="${album.artistId || ''}">${this.escapeHtml(album.artist)}</span>`
+              } 
               • <span>${album.releaseDate ? album.releaseDate.split('-')[0] : '----'}</span> 
               • <span>${album.tracks.length} songs</span>
               ${totalDurationFormatted ? `• <span>${totalDurationFormatted}</span>` : ""}
@@ -1275,41 +1583,133 @@
               ${album.label  ? `• <span>${this.escapeHtml(album.label)}</span>` : ""}
             </div>
             <button id="qobuz-save-all-btn" class="qobuz-save-all-btn">
-               ${ICONS.download} Save All Tracks
+               ${ICONS.download} ${this.saveAllLabel(album.tracks.length)}
             </button>
           </div>
         </div>
+        ${album.description ? `
+          <div style="padding:16px 24px 8px;">
+            <p id="qobuz-album-desc" class="qobuz-description collapsed">${this.escapeHtml(album.description.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim())}</p>
+            <button class="qobuz-show-more-btn" id="qobuz-album-desc-toggle">Show more</button>
+          </div>` : ""}
+
+        ${(album.awards && album.awards.length) ? `
+          <div style="padding:4px 24px 8px; font-size:12px; color:var(--accent-primary,#1a62b9);">
+            🏆 ${album.awards.map(a => this.escapeHtml(a.name)).join(" • ")}
+          </div>` : ""}
+
+        ${album.copyright ? `
+          <div style="padding:4px 24px 16px; font-size:11px; color:var(--text-subdued,#555);">
+            ${this.escapeHtml(album.copyright)}
+          </div>` : ""}
+
         <div class="qobuz-track-list">${album.tracks.map(t => this.renderTrackItem(t, true)).join("")}</div>
         ${missingTracks > 0 ? `
           <div class="qobuz-missing-warning">
             ⚠️ ${missingTracks} track${missingTracks > 1 ? "s" : ""} may be missing — Qobuz reports ${album.expectedTrackCount} total but only ${album.tracks.length} were returned.
           </div>` : ""}
+
+        ${(album.sameArtistAlbums && album.sameArtistAlbums.length) ? `
+          <div class="qobuz-section-header">More by ${this.escapeHtml(album.artist)}</div>
+          <div class="qobuz-grid-list" id="qobuz-same-artist-albums"></div>` : ""}
       `;
 
-      // Attach Listeners
-      const heroArtist = container.querySelector('.qobuz-hero .qobuz-clickable-artist');
-      if (heroArtist) {
-        heroArtist.onclick = () => {
-          if (album.artistId) this.loadArtistPage(album.artistId, album.artist);
+      // Attach Listeners — handle single or multiple artists in hero
+      container.querySelectorAll('.qobuz-hero .qobuz-clickable-artist').forEach(el => {
+        el.onclick = () => {
+          const id   = el.dataset.artistId;
+          const name = el.textContent;
+          if (id) this.loadArtistPage(id, name);
         };
-      }
+      });
 
       container.querySelector("#qobuz-save-all-btn").onclick = () => this.saveAllTracks(album.tracks, album);
       this.attachTrackListeners(container, album.tracks);
+
+      // Wire up "More by artist" discography grid — paginated
+      if (album.sameArtistAlbums?.length) {
+        this._renderPaginatedSection(
+          "qobuz-same-artist-albums", album.sameArtistAlbums,
+          a => this.renderCard(a, true),
+          (c, visible) => this.attachCardListeners(c, visible, true)
+        );
+      }
+
+      const descToggle = container.querySelector("#qobuz-album-desc-toggle");
+      const descEl     = container.querySelector("#qobuz-album-desc");
+      if (descToggle && descEl) {
+        descToggle.onclick = () => {
+          const collapsed = descEl.classList.toggle("collapsed");
+          descToggle.textContent = collapsed ? "Show more" : "Show less";
+        };
+      }
+    },
+
+    // Renders a paginated section with a "Show more" button.
+    // containerId   — the DOM id of the list container
+    // items         — full array of items
+    // renderFn      — function(item) → HTML string
+    // attachFn      — function(container, visibleItems) → void (attaches listeners)
+    // pageSize      — how many to show per page (default 20)
+    _renderPaginatedSection(containerId, items, renderFn, attachFn, pageSize = 20) {
+      const container = document.getElementById(containerId);
+      if (!container) return;
+
+      let shown = pageSize;
+
+      const render = () => {
+        const visible  = items.slice(0, shown);
+        const remaining = items.length - shown;
+
+        container.innerHTML = visible.map(renderFn).join("") + (remaining > 0
+          ? `<div id="${containerId}-show-more" style="grid-column:1/-1; text-align:center; padding:16px 0;">
+               <button style="background:transparent; border:1px solid var(--border-color,#444); color:var(--text-secondary,#aaa); padding:8px 24px; border-radius:20px; font-size:13px; cursor:pointer;">
+                 Show ${Math.min(remaining, pageSize)} more <span style="color:var(--text-subdued,#666);">(${remaining} left)</span>
+               </button>
+             </div>`
+          : "");
+
+        attachFn(container, visible);
+
+        const btn = document.getElementById(`${containerId}-show-more`);
+        if (btn) {
+          btn.querySelector("button").onclick = () => {
+            shown += pageSize;
+            render();
+            // Scroll the new button into view if there are more
+            const next = document.getElementById(`${containerId}-show-more`);
+            if (next) next.scrollIntoView({ behavior: "smooth", block: "nearest" });
+          };
+        }
+      };
+
+      render();
     },
 
     renderArtistView(data) {
       const container = document.getElementById("qobuz-content-area");
 
-      const { artistName, tracks = [], albums = [], albumsCount = null } = data || {};
+      const {
+        artistName, tracks = [], albums = [],
+        albumsCount = null, artistPicture = null,
+        description = null, appearsOn = [], playlists = []
+      } = data || {};
 
-      // Build initials avatar from artist name
+      // Hero avatar — real photo if available, otherwise initials
       const initials = (artistName || "?")
         .split(" ").slice(0, 2).map(w => w[0]?.toUpperCase() || "").join("");
+      const avatarHtml = artistPicture
+        ? `<div class="qobuz-artist-avatar" style="padding:0; overflow:hidden;" aria-label="${this.escapeHtml(artistName || "Artist")}">
+             <img src="${this.escapeHtml(artistPicture)}"
+               style="width:100%;height:100%;object-fit:cover;border-radius:50%;display:block;"
+               onerror="this.parentElement.innerHTML='${this.escapeHtml(initials)}';this.parentElement.style.padding='';">
+           </div>`
+        : `<div class="qobuz-artist-avatar" aria-label="${this.escapeHtml(artistName || "Artist")}">${this.escapeHtml(initials)}</div>`;
 
-      // Stats line
+      // Use albums directly (already contains merged discography from artist detail endpoint)
+      const discography = albums;
+
       const statParts = [];
-      if (albums.length) statParts.push(`${albums.length} album${albums.length !== 1 ? "s" : ""} in results`);
       if (tracks.length) statParts.push(`${tracks.length} track${tracks.length !== 1 ? "s" : ""} in results`);
 
       const hiResCount = tracks.filter(t => t.isHiRes).length;
@@ -1317,9 +1717,15 @@
         ? `${hiResCount} Hi-Res track${hiResCount !== 1 ? "s" : ""} available`
         : "";
 
+      // Strip HTML tags from description for safe display
+      const cleanDescription = description
+        ? description.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim()
+        : null;
+
+      // Render static skeleton — paginated sections filled in after
       container.innerHTML = `
         <div class="qobuz-hero">
-          <div class="qobuz-artist-avatar" aria-label="${this.escapeHtml(artistName || "Artist")}">${this.escapeHtml(initials)}</div>
+          ${avatarHtml}
           <div class="qobuz-hero-info">
             <div class="qobuz-hero-type">Artist</div>
             <div class="qobuz-hero-title">${this.escapeHtml(artistName || "Unknown Artist")}</div>
@@ -1328,32 +1734,52 @@
               ${qualityNote ? `<span style="color:var(--accent-primary,#1a62b9);">${qualityNote}</span>` : ""}
             </div>
             ${albumsCount ? `<div style="font-size:12px; color:var(--text-subdued,#666); margin-top:4px;">${albumsCount} albums on Qobuz</div>` : ""}
-            <div style="font-size:11px; color:var(--text-subdued,#555); margin-top:10px;">
-              Showing results from your current search session
-            </div>
             ${tracks.length ? `
               <button id="qobuz-artist-save-all-btn" class="qobuz-save-all-btn">
-                ${ICONS.download} Save All ${tracks.length} Tracks
+                ${ICONS.download} ${this.saveAllLabel(tracks.length)}
               </button>
             ` : ""}
           </div>
         </div>
 
+        ${cleanDescription ? `
+          <div style="padding:0 24px 16px;">
+            <p id="qobuz-artist-bio" class="qobuz-description collapsed">${this.escapeHtml(cleanDescription)}</p>
+            <button class="qobuz-show-more-btn" id="qobuz-bio-toggle">Show more</button>
+          </div>
+        ` : ""}
+
         ${tracks.length ? `
-          <div class="qobuz-section-header">Known Tracks</div>
-          <div class="qobuz-track-list" id="qobuz-artist-tracks">
-            ${tracks.map(t => this.renderTrackItem(t, false)).join("")}
-          </div>
+          <div class="qobuz-section-header">Top Tracks</div>
+          <div class="qobuz-track-list" id="qobuz-artist-tracks"></div>
         ` : ""}
 
-        ${albums.length ? `
-          <div class="qobuz-section-header">Known Albums</div>
-          <div class="qobuz-grid-list" id="qobuz-artist-albums">
-            ${albums.map(a => this.renderCard(a, true)).join("")}
-          </div>
+        ${playlists.length ? `
+          <div class="qobuz-section-header">Best of ${this.escapeHtml(artistName)}</div>
+          ${playlists.map((pl, i) => `
+            <div style="padding:0 24px 8px; display:flex; align-items:center; justify-content:space-between; gap:12px;">
+              <span style="font-size:12px; color:var(--text-subdued,#666);">
+                ${pl.tracksCount} tracks • ${this.formatDuration(pl.duration)} • by ${this.escapeHtml(pl.owner)}
+              </span>
+              <button class="qobuz-save-all-btn qobuz-save-playlist-btn" data-playlist-index="${i}" style="margin-top:0; flex-shrink:0;">
+                ${ICONS.download} Save as Playlist
+              </button>
+            </div>
+            <div class="qobuz-track-list" id="qobuz-artist-playlist-${i}"></div>
+          `).join("")}
         ` : ""}
 
-        ${!tracks.length && !albums.length ? `
+        ${discography.length ? `
+          <div class="qobuz-section-header">Discography</div>
+          <div class="qobuz-grid-list" id="qobuz-artist-albums"></div>
+        ` : ""}
+
+        ${appearsOn.length ? `
+          <div class="qobuz-section-header">Also Featured In</div>
+          <div class="qobuz-track-list" id="qobuz-artist-appears-on"></div>
+        ` : ""}
+
+        ${!tracks.length && !discography.length && !appearsOn.length && !playlists.length ? `
           <div class="qobuz-unavailable">
             <div class="qobuz-unavailable-icon">🎤</div>
             <div>No data found for this artist in the current search session.</div>
@@ -1362,14 +1788,57 @@
         ` : ""}
       `;
 
-      const trackList = container.querySelector("#qobuz-artist-tracks");
-      if (trackList) this.attachTrackListeners(trackList, tracks);
+      // ── Paginated sections ────────────────────────────────────────────────
+      if (tracks.length) {
+        this._renderPaginatedSection(
+          "qobuz-artist-tracks", tracks,
+          t => this.renderTrackItem(t, false),
+          (c, visible) => this.attachTrackListeners(c, visible)
+        );
+      }
 
-      const albumGrid = container.querySelector("#qobuz-artist-albums");
-      if (albumGrid) this.attachCardListeners(albumGrid, albums, true);
+      if (discography.length) {
+        this._renderPaginatedSection(
+          "qobuz-artist-albums", discography,
+          a => this.renderCard(a, true),
+          (c, visible) => this.attachCardListeners(c, visible, true)
+        );
+      }
+
+      if (appearsOn.length) {
+        this._renderPaginatedSection(
+          "qobuz-artist-appears-on", appearsOn,
+          t => this.renderTrackItem(t, false),
+          (c, visible) => this.attachTrackListeners(c, visible)
+        );
+      }
+
+      playlists.forEach((pl, i) => {
+        if (pl.tracks.length) {
+          this._renderPaginatedSection(
+            `qobuz-artist-playlist-${i}`, pl.tracks,
+            t => this.renderTrackItem(t, false),
+            (c, visible) => this.attachTrackListeners(c, visible)
+          );
+        }
+
+        const saveBtn = container.querySelector(`.qobuz-save-playlist-btn[data-playlist-index="${i}"]`);
+        if (saveBtn) {
+          saveBtn.onclick = () => this.saveAsPlaylist(pl);
+        }
+      });
 
       const artistSaveAllBtn = container.querySelector("#qobuz-artist-save-all-btn");
       if (artistSaveAllBtn) artistSaveAllBtn.onclick = () => this.saveAllTracks(tracks);
+
+      const bioToggle = container.querySelector("#qobuz-bio-toggle");
+      const bioEl     = container.querySelector("#qobuz-artist-bio");
+      if (bioToggle && bioEl) {
+        bioToggle.onclick = () => {
+          const collapsed = bioEl.classList.toggle("collapsed");
+          bioToggle.textContent = collapsed ? "Show more" : "Show less";
+        };
+      }
     },
 
     renderTrackItem(track, isCompact = false) {
@@ -1393,7 +1862,10 @@
       return `
         <div class="qobuz-track-item ${isPlaying ? 'playing' : ''}" data-id="${track.id}">
           <div class="qobuz-track-cover-wrapper">
-            <img src="${this.escapeHtml(coverUrl)}" class="qobuz-track-cover" loading="lazy" onerror="this.style.display='none'">
+            ${isCompact && track.trackNumber
+              ? `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--text-subdued,#666);font-variant-numeric:tabular-nums;">${track.trackNumber}</div>`
+              : `<img src="${this.escapeHtml(coverUrl)}" class="qobuz-track-cover" loading="lazy" onerror="this.style.display='none'">`
+            }
             <div class="qobuz-play-overlay">${isPlaying ? ICONS.play : ''}</div>
           </div>
           <div style="min-width:0;">
@@ -1405,7 +1877,7 @@
             ${!isCompact
               ? `<div class="qobuz-track-artist">
                   <span class="qobuz-clickable-artist" data-artist-id="${track.artistId || ""}">${this.escapeHtml(track.artist)}</span>
-                  ${track.albumTitle ? `<span style="color:var(--text-subdued,#666); font-size:16px; margin:0 4px; line-height:1;">·</span><span style="color:var(--text-secondary,#888); font-size:12px;">${this.escapeHtml(track.albumTitle)}</span>` : ""}
+                  ${track.albumTitle ? `<span style="color:var(--text-subdued,#666); font-size:16px; margin:0 4px; line-height:1;">·</span><span class="qobuz-clickable-album" data-album-id="${track.albumId || ""}" data-album-upc="${track.albumUpc || ""}">${this.escapeHtml(track.albumTitle)}</span>` : ""}
                   ${qualityLabel ? `<span style="color:var(--text-subdued,#666); font-size:16px; margin:0 4px; line-height:1;">·</span><span style="color:var(--text-subdued,#555); font-size:11px;">${this.escapeHtml(qualityLabel)}</span>` : ""}
                 </div>`
               : (qualityLabel ? `<div style="font-size:11px; color:var(--text-subdued,#555); margin-top:2px;">${this.escapeHtml(qualityLabel)}</div>` : "")}
@@ -1431,15 +1903,21 @@
       const hiresBadge = (isAlbum && item.isHiRes)
         ? `<span class="qobuz-badge" style="font-size:9px; padding:1px 5px; flex-shrink:0;">Hi-Res</span>`
         : "";
+      const latestBadge = (isAlbum && item.isLatest)
+        ? `<span class="qobuz-badge" style="font-size:9px; padding:1px 5px; flex-shrink:0; background:var(--text-secondary,#aaa); color:#000;">New</span>`
+        : "";
 
       return `
         <div class="qobuz-card" data-id="${item.id}">
           <img src="${this.escapeHtml(imgUrl)}" class="qobuz-card-img" loading="lazy">
           <div class="qobuz-card-title">${this.escapeHtml(title)}</div>
           <div class="qobuz-card-sub">
-            <span class="qobuz-card-sub-text">${this.escapeHtml(artistText)}</span>
+            ${(isAlbum && item.artistId)
+              ? `<span class="qobuz-card-sub-text qobuz-clickable-artist" data-artist-id="${item.artistId}">${this.escapeHtml(artistText)}</span>`
+              : `<span class="qobuz-card-sub-text">${this.escapeHtml(artistText)}</span>`
+            }
             ${trackCount ? `<span class="qobuz-card-sub-count">• ${trackCount}</span>` : ""}
-            ${hiresBadge}
+            ${hiresBadge}${latestBadge}
           </div>
         </div>
       `;
@@ -1448,11 +1926,23 @@
     renderArtistCard(artist) {
       const initials = (artist.name || "?")
         .split(" ").slice(0, 2).map(w => w[0]?.toUpperCase() || "").join("");
+      // If a picture URL is available (Paxsenix), render an img that falls back
+      // to the initials div if the image fails to load
+      const avatarHtml = artist.picture
+        ? `<div class="qobuz-artist-card-avatar" style="padding:0; overflow:hidden;">
+             <img src="${this.escapeHtml(artist.picture)}"
+               style="width:100%;height:100%;object-fit:cover;border-radius:50%;display:block;"
+               onerror="this.parentElement.innerHTML='${this.escapeHtml(initials)}';this.parentElement.style.padding='';">
+           </div>`
+        : `<div class="qobuz-artist-card-avatar">${this.escapeHtml(initials)}</div>`;
+      const subText = artist.albumsCount
+        ? `${artist.albumsCount} albums`
+        : "Artist";
       return `
         <div class="qobuz-card qobuz-artist-card" data-id="${artist.id}">
-          <div class="qobuz-artist-card-avatar">${this.escapeHtml(initials)}</div>
+          ${avatarHtml}
           <div class="qobuz-card-title">${this.escapeHtml(artist.name)}</div>
-          <div class="qobuz-card-sub"><span class="qobuz-card-sub-text">Artist</span></div>
+          <div class="qobuz-card-sub"><span class="qobuz-card-sub-text">${subText}</span></div>
         </div>
       `;
     },
@@ -1476,6 +1966,13 @@
             if (artistId) this.loadArtistPage(artistId, artistName);
             return;
           }
+          const albumClick = e.target.closest('.qobuz-clickable-album');
+          if (albumClick) {
+            const albumId    = albumClick.dataset.albumId;
+            const albumTitle = albumClick.textContent.trim();
+            if (albumId) this.loadAlbumPage(albumId, albumTitle);
+            return;
+          }
           const track = tracks.find(t => String(t.id) === String(el.dataset.id));
           if (!track) return;
           const saveBtn = e.target.closest('.qobuz-save-btn-mini');
@@ -1487,7 +1984,16 @@
 
     attachCardListeners(container, items, isAlbum) {
       container.querySelectorAll(".qobuz-card").forEach((el) => {
-        el.onclick = () => {
+        el.onclick = (e) => {
+          // Artist name click inside album card
+          const artistClick = e.target.closest(".qobuz-clickable-artist");
+          if (artistClick) {
+            e.stopPropagation();
+            const id   = artistClick.dataset.artistId;
+            const name = artistClick.textContent.trim();
+            if (id) this.loadArtistPage(id, name);
+            return;
+          }
           const item = items.find(i => String(i.id) === String(el.dataset.id));
           if (!item) return;
           if (isAlbum) this.loadAlbumPage(item.id, item.title);
@@ -1544,7 +2050,7 @@
         this.showToast(`▶ ${track.title} [${qualityLabel}]`);
       } catch (err) {
         console.error("[QobuzSearch] Playback error:", err);
-        this.showToast("Playback Error", true);
+        this.showToast("Playback failed — no stream available for this track.", true);
       }
     },
 
@@ -1659,11 +2165,99 @@
       if (this.api?.library?.refresh) await this.api.library.refresh();
     },
 
+    async saveAsPlaylist(pl) {
+      if (!pl?.tracks?.length) { this.showToast("No tracks to save", true); return; }
+
+      const progressEl   = document.getElementById("qobuz-save-progress");
+      const progressBar  = progressEl?.querySelector(".qobuz-progress-bar-inner");
+      const progressText = progressEl?.querySelector(".qobuz-progress-text");
+      if (progressEl) progressEl.classList.remove("hidden");
+      if (progressText) progressText.textContent = `Creating playlist "${pl.name}"...`;
+
+      try {
+        // ── 1. Create playlist ───────────────────────────────────────────────
+        const rawPlaylistId = await this.api.library.createPlaylist(pl.name);
+        if (!rawPlaylistId) throw new Error("createPlaylist returned no ID");
+        const playlistId = Number(rawPlaylistId); // runtime requires a number
+        if (isNaN(playlistId)) throw new Error("createPlaylist returned non-numeric ID: " + rawPlaylistId);
+
+        // ── 2. Set cover — use best available image ──────────────────────────
+        const coverUrl = (pl.images || [])[0] || null;
+        if (coverUrl && this.api.library.updatePlaylistCover) {
+          await this.api.library.updatePlaylistCover(playlistId, coverUrl);
+        }
+
+        // ── 3 & 4. Save each track then add to playlist ──────────────────────
+        let savedCount = 0, skippedCount = 0, errorCount = 0;
+        const tracks = pl.tracks;
+
+        for (let i = 0; i < tracks.length; i++) {
+          const track = tracks[i];
+
+          const pct = ((i + 1) / tracks.length) * 100;
+          if (progressBar)  progressBar.style.width = `${pct}%`;
+          if (progressText) progressText.textContent = `Adding ${i + 1} of ${tracks.length} tracks...`;
+
+          const externalId = String(track.id).startsWith("qobuz:")
+            ? String(track.id).split(":")[1]
+            : String(track.id);
+
+          if (this.libraryTracks.has(externalId)) { skippedCount++; continue; }
+
+          try {
+            // addExternalTrack returns the internal DB track ID
+            const trackId = await this.api.library.addExternalTrack({
+              title:       track.title,
+              artist:      track.artist   || null,
+              album:       track.albumTitle || null,
+              duration:    track.duration  || null,
+              cover_url:   track.cover     || null,
+              format:      (track.bitDepth && track.sampleRate)
+                ? `${track.bitDepth}bit/${track.sampleRate}kHz`
+                : (track.isHiRes ? "Hi-Res" : "CD"),
+              bitrate:     null,
+              source_type: SOURCE_TYPE,
+              external_id: externalId,
+            });
+
+            if (trackId && this.api.library.addTrackToPlaylist) {
+              await this.api.library.addTrackToPlaylist(playlistId, Number(trackId));
+            }
+
+            this.libraryTracks.add(externalId);
+            savedCount++;
+          } catch (e) {
+            console.error("[QobuzSearch] saveAsPlaylist — failed track", track.id, e);
+            errorCount++;
+          }
+
+          await new Promise(r => setTimeout(r, 50));
+        }
+
+        // ── 5. Refresh library ───────────────────────────────────────────────
+        if (this.api?.library?.refresh) await this.api.library.refresh();
+
+        if (progressEl) progressEl.classList.add("hidden");
+        if (progressBar) progressBar.style.width = "0%";
+
+        this.showToast(errorCount === 0
+          ? (skippedCount > 0
+            ? `✓ Playlist "${pl.name}" saved (${savedCount} new, ${skippedCount} already in library)`
+            : `✓ Playlist "${pl.name}" saved (${savedCount} tracks)`)
+          : `Playlist saved — ${savedCount} tracks, ${errorCount} failed`, errorCount > 0);
+
+      } catch (err) {
+        if (progressEl) progressEl.classList.add("hidden");
+        if (progressBar) progressBar.style.width = "0%";
+        console.error("[QobuzSearch] saveAsPlaylist failed:", err);
+        this.showToast("Failed to create playlist", true);
+      }
+    },
+
     async searchCoverForRPC(title, artist, trackId) {
       const tag = "[QobuzSearch:searchCoverForRPC]";
       try {
         const query = `${title} ${artist}`.trim();
-        console.log(`${tag} Searching cover for "${query}"`);
 
         const url = `${JUMO_BASE}/search?query=${encodeURIComponent(query)}&offset=0&limit=10&region=NZ`;
         const res = await (this.api.fetch
@@ -1682,13 +2276,10 @@
 
         if (!cover) { console.warn(`${tag} First result has no cover`); return null; }
 
-        console.log(`${tag} Cover found: ${cover}`);
-
         // Update database if trackId provided
         if (trackId && this.api.library?.updateTrackCoverUrl) {
           try {
             await this.api.library.updateTrackCoverUrl(trackId, cover);
-            console.log(`${tag} Updated cover_url for trackId=${trackId}`);
           } catch (err) {
             console.warn(`${tag} Could not update database:`, err);
           }
